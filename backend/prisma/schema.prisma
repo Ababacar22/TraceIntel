@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Investigation {
+  id         String   @id @default(uuid())
+  title      String?
+  status     String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+  config     Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  targets    Target[]
+  tasks      Task[]
+}
+
+model Target {
+  id               String        @id @default(uuid())
+  investigationId  String
+  targetType       String        // e.g., EMAIL_ADDRESS, DOMAIN_NAME
+  targetValue      String
+  investigation    Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id               String          @id @default(uuid())
+  investigationId  String
+  moduleName       String
+  status           String          @default("QUEUED") // QUEUED, RUNNING, SUCCESS, FAILED
+  errorMessage     String?
+  rawResults       Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  investigation    Investigation   @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  vulnerabilities  Vulnerability[]
+}
+
+model Vulnerability {
+  id               String   @id @default(uuid())
+  taskId           String
+  templateId       String   // e.g., "CVE-2021-44228"
+  name             String
+  severity         String   // info, low, medium, high, critical
+  description      String?
+  matchedAt        String?  // The specific URL or component matched
+  reference        Json?    // Array of URLs/references
+  extractedResults Json?    // Any specific data extracted (e.g., version numbers)
+  createdAt        DateTime @default(now())
+  task             Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
